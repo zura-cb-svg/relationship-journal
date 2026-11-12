@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: journal
+      POSTGRES_PASSWORD: local-compose-only-password
+      POSTGRES_DB: relationship_journal_db
+    volumes:
+      - journal_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/01-test.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U journal -d relationship_journal_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+pg8000://journal:local-compose-only-password@db:5432/relationship_journal_db
+      TEST_DATABASE_URL: postgresql+pg8000://journal:local-compose-only-password@db:5432/relationship_journal_test_db
+      REDIS_URL: redis://redis:6379/0
+      REDIS_TEST_URL: redis://redis:6379/1
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in your local .env or shell}
+      COOKIE_SECURE: "false"
+      CORS_ORIGINS: http://127.0.0.1:5173,http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8001:8001"
+    command: ["sh", "-c", "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8001 --no-access-log"]
+volumes:
+  journal_data:

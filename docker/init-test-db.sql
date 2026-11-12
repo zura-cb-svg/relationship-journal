@@ -1,0 +1,1 @@
+CREATE DATABASE relationship_journal_test_db;
