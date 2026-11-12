@@ -1,34 +1,68 @@
-# Relationship Journal API
+# BETWEEN — Director’s Cut
 
-A privacy-conscious personal journal backend built with Python, FastAPI, PostgreSQL, SQLAlchemy, Alembic, Redis and pytest. An educational portfolio project; not an audited production service. AI assisted portions of implementation and review.
+**A space for what matters.** A full-stack personal relationship journal and cinematic web experience, built as a software engineering portfolio project.
 
-## Features
+![Between cinematic landing page](docs/screenshots/landing.jpg)
 
-- Account registration, Argon2 password hashing, short-lived JWT access tokens
-- Database-backed sessions, hashed refresh tokens, rotation and replay revocation
-- Redis-backed authentication rate limits
-- Owner-scoped relationships and journal entries, pagination and literal case-insensitive search
-- Dashboard, private JSON export, password-confirmed account deletion
-- Health/readiness endpoints and automated integration tests
+The application combines a Python API with a responsive, scroll-driven visual narrative. Try the fictional-data demo in the interface; no account is needed for demo mode.
 
-## Local development (existing PostgreSQL and Redis)
+## What I built and learned
 
-1. Create a virtual environment and install `pip install -r requirements.txt`.
-2. Copy `.env.example` to `.env`, configure the database URLs and Redis URLs, and set a random JWT secret (at least 32 bytes). Never commit `.env`.
-3. Start your PostgreSQL and Redis containers and create the separate `relationship_journal_test_db` database.
-4. Run `alembic upgrade head` and `uvicorn main:app --reload --port 8001 --no-access-log`.
-5. Open `http://127.0.0.1:8001/docs`. Run `python -m pytest -q` to test.
+I designed and developed the original Relationship Journal backend as a computer science student, working through database models, API endpoints, authentication, ownership checks, migrations and integration tests with AI mentorship. I then used AI-assisted development to extend the security architecture, session management, testing, documentation and cinematic frontend. I ran the project locally, tested its behavior and selected the final visual direction. This is an educational portfolio project, not independently audited production software.
 
-## Alternative: local Docker Compose
+## Highlights
 
-With a local `.env` containing a valid JWT_SECRET, run `docker compose up --build -d`. The API is published on loopback only; the database and Redis use a new isolated Compose network and data volume. This configuration is for development, not production. Stop any existing server on port 8001 first. Run tests with `docker compose run --rm api python -m pytest -q`. `docker compose down` stops services without deleting data. Do not use `down -v` on data you want to retain.
+- FastAPI REST API, PostgreSQL, SQLAlchemy, Alembic and Redis.
+- Argon2 password hashing, JWT access tokens, database-backed refresh-token rotation, session revocation and IP-based rate limiting.
+- Owner-scoped relationship and journal CRUD, filtering, search, pagination, dashboard counts, JSON export and password-confirmed account deletion.
+- Original parametric ribbon geometry, GLSL shaders and scroll-linked WebGL rendering; a 108-frame WebP atlas fallback and reduced-motion layout.
+- Native HTML, CSS and JavaScript; no frontend build step or external CDN required.
+- 39 backend integration tests passed locally and Backend CI succeeded for the initial backend release. Frontend smoke checks were conducted separately; see [FRONTEND.md](FRONTEND.md) for scope and limitations.
 
-## API authentication
+![Journal dashboard](docs/screenshots/dashboard.jpg)
 
-`POST /signup` accepts JSON. `POST /login` accepts OAuth2-style form fields `username` (email) and `password`; this is first-party application authentication, not a general OAuth provider. It returns a bearer access token and sets an HttpOnly, SameSite=Strict refresh cookie. Send the access token in the Authorization header. `POST /refresh` rotates the cookie and returns a new access token; `POST /logout` revokes the current cookie session. `DELETE /me` requires JSON containing the current password. Older access tokens without a session ID are no longer accepted.
+## Architecture
 
-A browser client should keep access tokens in memory, send credentialed requests for authentication, serialize refresh attempts, and use the same site as the API. For local development use the same hostname for frontend and API. For HTTPS deployment set COOKIE_SECURE=true and configure exact trusted CORS origins and proxy settings. Do not store refresh tokens in localStorage. Use synthetic journal data in demos.
+```text
+Browser / cinematic UI / fictional demo
+                |
+       Same-origin FastAPI
+       /                  \
+ PostgreSQL              Redis
+ users, relationships    authentication
+ journal, sessions       rate limits
+```
 
-## Operations and limitations
+Real authentication uses an in-memory browser access token and a server-issued HttpOnly refresh cookie. Keeping UI and API on the same origin avoids cross-site cookie dependencies. The public static showcase, when enabled, runs only on fictional demo data, not the API.
 
-`GET /health` reports liveness; `GET /ready` checks PostgreSQL and Redis. Application logging avoids request bodies and query strings; keep proxy/access logging configured to avoid sensitive URLs. `/me/export` is a bounded JSON export. Redis limits currently use client IP, not a complete distributed abuse prevention system. Production work still includes HTTPS, secret rotation, request size limits, account-level abuse controls, session cleanup, backup/restore, dependency scanning and independent security review. Docker/CI configuration must be validated on the target environment.
+## Run locally
+
+1. Install Python 3.12 and Docker. Create and activate a virtual environment; install `pip install -r requirements.txt`.
+2. Copy `.env.example` to `.env` and configure the local database and Redis URLs. Generate a random JWT secret of at least 32 bytes. Never commit `.env`.
+3. Start PostgreSQL and Redis, create the separate `relationship_journal_test_db` database, and run `alembic upgrade head`.
+4. Run `python -m uvicorn serve_frontend:app --host 127.0.0.1 --port 8002 --no-access-log`.
+5. Open `http://127.0.0.1:8002`. API documentation is available at `/docs`.
+6. Run `python -m pytest -q` with the isolated test services configured.
+
+For Docker Compose, the existing `compose.yaml` and `compose.frontend.yaml` provide a development configuration. Set `JWT_SECRET` in a local `.env` and run `docker compose -f compose.yaml -f compose.frontend.yaml up --build -d`. The compose configuration binds the API to loopback port 8001. The optional full-stack Docker image uses `Dockerfile.between`. These configurations must be validated in their target environments.
+
+## API overview
+
+| Endpoint | Purpose |
+| --- | --- |
+| POST /signup, /login | Account and access token |
+| POST /refresh, /logout | Refresh rotation and session revocation |
+| GET /me, DELETE /me | Profile and password-confirmed deletion |
+| /relationships | Owner-scoped CRUD, filtering and pagination |
+| /relationships/{id}/entries | Journal entry CRUD and search |
+| GET /dashboard | Counts by relationship status |
+| GET /me/export | Bounded JSON data export |
+| GET /health, /ready | Liveness and service readiness |
+
+## Security and deployment limitations
+
+Use fictional data for showcases. Do not store real sensitive journal information in a portfolio deployment. Set secure cookies and exact trusted origins on HTTPS. IP limits are not complete abuse prevention; production use would require further security review, secret management, backup/restore, request-size limits and session cleanup. The hosted demo must not request passwords. Hardware WebGL performance and Safari compatibility vary by device; see [FRONTEND.md](FRONTEND.md).
+
+## Mobile experience
+
+![Mobile landing](docs/screenshots/mobile.jpg)
